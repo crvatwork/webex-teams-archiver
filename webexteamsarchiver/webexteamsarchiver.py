@@ -28,6 +28,7 @@ import json
 import datetime
 from collections import namedtuple
 from webexteamssdk import WebexTeamsAPI
+from webexteamssdk import utils
 from webexteamssdk.exceptions import MalformedResponse, ApiError
 from webexteamssdk.models.immutable import Person
 from webexteamssdk.generator_containers import GeneratorContainer
@@ -113,7 +114,7 @@ class WebexTeamsArchiver:
             return File("", 0, "", "UNKNOWN", True)
 
     def archive_room(self, room_id: str, text_format: bool = True, html_format: bool = True,
-                     json_format: bool = True, **options) -> str:
+                     json_format: bool = True, start_date: datetime = None, **options) -> str:
         """
         Archives a Webex Teams room. This creates a file called roomTitle_timestamp_roomId with the
         appropriate file extension as defined by file_format param with the following contents:
@@ -136,7 +137,7 @@ class WebexTeamsArchiver:
                 download_workers: Number of download workers for downloading files.
                 timestamp_format: Timestamp strftime format.
                 file_format: Archive format as supported by shutil.make_archive
-                
+
 
         Returns:
             Name of archive file.
@@ -159,16 +160,16 @@ class WebexTeamsArchiver:
         file_format = options.get("file_format", "gztar")
 
         if delete_folder and not compress_folder:
-            raise ValueError("delete_folder cannot be True while compress_folder is False") 
+            raise ValueError("delete_folder cannot be True while compress_folder is False")
 
-        self._gather_room_information(room_id, download_avatars)
+        self._gather_room_information(room_id, download_avatars, start_date)
 
         # Prepare folder
         self._setup_folder(download_attachments, download_avatars, html_format)
         try:
             self._archive(reverse_order, download_attachments, download_avatars, download_workers,
                           text_format, html_format, json_format, timestamp_format)
-            
+
             if compress_folder:
                 filename = self._compress_folder(file_format)
             else:
@@ -257,7 +258,7 @@ class WebexTeamsArchiver:
         if os.path.isdir(self.archive_folder_name):
             shutil.rmtree(self.archive_folder_name, ignore_errors=False)
 
-    def _gather_room_information(self, room_id: str, download_avatars: bool) -> None:
+    def _gather_room_information(self, room_id: str, download_avatars: bool, start_date: datetime) -> None:
         """Calls Webex Teams APIs to get room information and messages."""
 
         # Structure: {"personId": webexteamssdk.models.immutable.Person}
@@ -296,6 +297,10 @@ class WebexTeamsArchiver:
                 room_id, mentionedPeople="me")
         else:
             self.messages = self.sdk.messages.list(room_id)
+
+        if start_date:
+            filtered_messages = [message for message in self.messages if self._compare_date(message.created) > start_date]
+            self.messages = filtered_messages
 
         self.messages_with_threads = self.messages
         self._organize_by_threads(self.messages, download_avatars)
@@ -430,3 +435,8 @@ class WebexTeamsArchiver:
     def _compress_folder(self, file_format: str) -> str:
         """Compress `archive_folder_name` folder with the format defined by file_format param"""
         return shutil.make_archive(self.archive_folder_name, file_format, self.archive_folder_name)
+
+    def _compare_date(self, webex_date):
+        message_str = utils.WebexTeamsDateTime.__str__(webex_date)
+        message_dt = datetime.datetime.strptime(message_str, "%Y-%m-%dT%H:%M:%S.%fZ")
+        return(message_dt)
