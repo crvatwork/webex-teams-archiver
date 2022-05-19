@@ -112,3 +112,6 @@ dmypy.json
 
 # Mac files
 .DS_Store
+
+# Config files
+date-config.toml

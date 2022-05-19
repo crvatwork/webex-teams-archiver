@@ -1,0 +1,11 @@
+[creds]
+token = '12345'
+
+[channels]
+# room id from https://developer.webex.com/docs/api/v1/rooms/list-rooms
+pvt_ch1 = 'Yy0xzovL3VzL1JPT00WY2lzYaWJmNvMDUwZMFyOGI0DAt29zcGViLTkwNzEtYWJhYzMxZjQ0MGNk'
+pvt_ch2 = '0Y2lzY29zcGFyavMDIA00NjtOWQ2YyzLxMWViLTg3MGEyOGRktOGI0YovL3V1JPTzTQ2ODMwN2Jh'
+
+[time]
+# MM-DD-YYYY HH:MM
+start = '05-17-2022 09:01'
